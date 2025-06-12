@@ -1,8 +1,127 @@
-<!DOCTYPE HTML>
-<html lang = "en">
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Sonam Wangchuk</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sonam Wangchuk</title>
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <link rel="stylesheet" href="styles.css">
 </head>
-<h3> Hello World Again! </h3>
+<body>
+<button id="sound-toggle" aria-label="Toggle Sound" title="Toggle Sound">
+  <img id="sound-icon" src="assets/on.svg" alt="Sound On" class="svg-icon">
+</button>
+
+<button id="dark-mode-toggle" aria-label="Toggle Dark Mode">
+  
+<img id="dark-mode-icon" src="assets/sun.svg" alt="Light Mode" class="svg-icon">
+
+</button>
+
+
+
+<div id="home-tab" class="home-tab">
+  <div class="header">
+    <span class="title"><h2>home</h2></span>
+  </div>
+  <h1>Hello! I'm&nbsp;<span class="blue-name">Sonam.</span></h1>
+
+  <div class="button-group">
+    <button id="about-btn">About</button>
+    <button id="projects-btn">Projects</button>
+    <button id="resume-btn">Resumé</button>
+    <button id="contact-btn">Contact</button>
+  </div>
+  <h3>Trying to create meaning in my little life within this big world</h3>
+</div>
+
+<!--About Box-->
+<div id="about" class="draggable-box">
+  <div class="header">
+    <span class="title">about</span>
+    <button class="close-btn" aria-label="Close">[ x ]</button>
+  </div>
+  <h2>My name is&nbsp;<span class="blue-name">Sonam Tenzin Wangchuk</span></h2>
+  <img id = "about-img" src = "assets/personalPhoto.jpg"></img>
+<div style="text-align: left; margin-left: 1.5em; margin-right: 1.5em;">
+<h4>
+  I am currently a Research Assistant at the&nbsp;<span class="blue-name">Rutledge Lab</span>, working on studying the decision making patterns of patients with parkinson's to better understand dopamine. I care about this work as such research can better our understanding of human decision making, and guide future research into medication for other neuro-degenerative diseases.
+</h4>
+<h4>
+  I have also worked as the lead outreach coordinatior for&nbsp;<span class="blue-name">Yale Summer Session</span>, an Undergraduate Learning Assistant for the FSY program under the statistics department, and as the lead commencement aide of&nbsp;<span class="blue-name">Pauli Murray.</span>
+</h4>
+<h4>
+  I am a senior at&nbsp;<span class="blue-name">Yale University</span>, majoring in Computer Science, Psychology, and Statistics and Data Science. During my college years, I've been honored with the F. Wilder Bellamy Jr. Memorial Prize and the Henry James TenEyck Prize, and will be serving as head first-year counselor from 2025-2026.
+</h4>
+</div>
+</div>
+
+<!--Project Box-->
+<div id="projects" class="draggable-box">
+  <div class="header">
+    <span class="title">projects</span>
+    <button class="close-btn" aria-label="Close">[ x ]</button>
+  </div>
+  <div style="text-align: left; margin-left: 1.5em; margin-right: 1.5em;">
+<h4>
+  I am currently working on a horror top down strategy game! Sneak peek below:
+</h4>
+<img id="about-img" src="assets/game.png" />
+
+<h4>I have also worked on:</h4>
+<ul class="about-list">
+  <li>Gathering data by designing and conducting an experiment on real participants to study&nbsp;<span class="blue-name">"Self Perception and Risky Decision-Making"</span>. Subsequent analysis was done by fitting 3 separate multi-parameter models to the gambling behavior data of participants when shown their own face compared to being shown other faces, allowing me to see effects on well known frameworks such as prospect theory and approach avoidance. The report can be found <a href="assets/Self Perception and Risky Decision-Making.pdf" class="blue-name" target="_blank" rel="noopener noreferrer">HERE</a></li>
+  <img id="about-img" src="assets/experiment.png" />
+  <li>Data visualization for speaker point inflation in&nbsp;<span class="blue-name">American Parliamentary Debate</span>. The shiny app that visually displays speaker scores for various tournaments from 2022-2025 can be found <a href="https://sonamwangchuk.shinyapps.io/APDASpeakerVisualizer/" class="blue-name" target="_blank" rel="noopener noreferrer">HERE</a></li>
+  <li>Multiple outreach and marketing campaigns for&nbsp;<span class="blue-name">Yale Summer Session</span>. A personal favorite can be found <a href="https://www.instagram.com/p/C_d1HopAgR0/?img_index=1" class="blue-name" target="_blank" rel="noopener noreferrer">HERE</a>.</li>
+  <li>This website! Made with pure&nbsp;<span class="blue-name">HTML, CSS, and JavaScript</span></li>
+</ul>
+</div>
+</div>
+
+<!--Resume Box-->
+<div id="resume" class="draggable-box">
+  <div class="header">
+    <span class="title">resumé</span>
+    <button class="close-btn" aria-label="Close">[ x ]</button>
+  </div>
+  <div style="text-align: left; margin-left: 1.5em; margin-right: 1.5em;">
+  <h4>
+    My resume can be found
+    <a href="assets/Resumé.pdf" class="blue-name" target="_blank" rel="noopener noreferrer">HERE</a>
+  </h4>
+  <h4>
+    (This will open a new tab).
+  </h4>
+  </div>
+</div>
+
+
+<!--Contact Box-->
+<div id="contact" class="draggable-box">
+  <div class="header">
+    <span class="title">contact</span>
+    <button class="close-btn" aria-label="Close">[ x ]</button>
+  </div>
+  <h2>I love emails!</h2>
+  <div style="text-align: left; margin-left: 1.5em; margin-right: 1.5em;">
+<h4>
+  The best way to reach me is through my work email:&nbsp;
+  <span class="blue-name" id="email-address" tabindex="0" title="Click to copy" data-tooltip="Tap to copy">
+    sonam.wangchuk@yale.edu
+  </span>
+</h4>
+<h4>I'm open to freelance work and more formal roles, and am also happy to answer any questions</h4>
+</div>
+</div>
+
+  <script src="script.js"></script>
+<footer id = "footer">
+  &copy; 2025 Sonam Tenzin Wangchuk
+</footer>
+
+
+</body>
+
+
 </html>
