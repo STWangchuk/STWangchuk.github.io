@@ -1,0 +1,147 @@
+body {
+  font-family: "Open Sans", "Helvetica Neue";
+  padding: 18px;
+  max-width: 900px;
+  color: #333333;
+}
+
+label {
+  display: block;
+  margin: 8px 0;
+}
+
+textarea {
+  width: 100%;
+  margin-top: 12px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+button {
+  margin-right: 8px;
+  padding: 8px 12px;
+  background-color: #ffffff;
+  color: #333333;
+  border: 2px solid #007acc;    
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+button:hover {
+  background-color: #007acc;     
+  color: #ffffff;                
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+button:active {
+  background-color: #005f99;     
+  border-color: #005f99;
+  transform: translateY(1px);    
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,122,204,0.4);
+}
+
+#openLink {
+  display: inline-block;
+  margin-left: 8px;
+}
+
+.color-inputs {
+  display: flex;
+  gap: 20px;
+  margin: 15px 0;
+}
+
+.color-group {
+  flex: 1;
+}
+
+#csvInput {
+  height: 120px;
+}
+
+#output {
+  height: 200px;
+}
+
+.section {
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #007acc;    
+  border-radius: 6px;
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #2196f3;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(26px);
+}
+
+#googleSheetsUrl {
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+
+#googleSheetsUrl:focus {
+  outline: none;
+  border-color: #007acc;
+  box-shadow: 0 0 0 3px rgba(0,122,204,0.2);
+}

@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Risky Task Generator</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <h1>Risky Task Generator</h1>
+  <p>Adjust everything that you need, then click <b>Generate</b> to create your experiment.</p>
+  <p>Made by <a href="https://stwangchuk.github.io/" class="blue-name" target="_blank" rel="noopener noreferrer">Sonam Tenzin Wangchuk.</a></li></p>
+
+  <div class="section">
+    <h3>Colors</h3>
+    <div class="color-inputs">
+      <div class="color-group">
+        <label>Color for 0:
+          <input id="neutralColor" type="color" value="#347edf">
+          <span id="nhex"></span>
+        </label>
+      </div>
+      <div class="color-group">
+        <label>Positive Numbers:
+          <input id="greenColor" type="color" value="#3bc43b">
+          <span id="ghex"></span>
+        </label>
+      </div>
+      <div class="color-group">
+        <label>Negative Numbers:
+          <input id="redColor" type="color" value="#f83f3f">
+          <span id="rhex"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Instructions Text</h3>
+    <p>Customize the opening instructions (HTML allowed):</p>
+    <textarea id="instructionsInput" style="height: 100px;"><h1>Risky Decision-Making Task</h1>
+<p>On each trial you will choose between a <strong>Safe</strong> option and a <strong>Risky</strong> option.</p>
+<p>The Safe option gives a guaranteed number of points.</p>
+<p>The Risky option gives either a higher or lower number of points with equal probability (50/50).</p>
+<p>Try to earn as many points as possible.</p></textarea>
+  </div>
+
+  <div class="section">
+    <h3>Display Options</h3>
+    <div class="toggle-container">
+      <label class="toggle-switch">
+        <input type="checkbox" id="showTrialCount" checked>
+        <span class="toggle-slider"></span>
+      </label>
+      <label for="showTrialCount">Show trial count (Trial X/Y)</label>
+    </div>
+    <div class="toggle-container">
+      <label class="toggle-switch">
+        <input type="checkbox" id="randomizeTrials" checked>
+        <span class="toggle-slider"></span>
+      </label>
+      <label for="randomizeTrials">Randomize trial order</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Feedback Options</h3>
+    <div class="toggle-container">
+      <label class="toggle-switch">
+        <input type="checkbox" id="autoAdvance">
+        <span class="toggle-slider"></span>
+      </label>
+      <label for="autoAdvance">Auto-advance after feedback</label>
+    </div>
+    <div style="margin-top: 15px; margin-left: 60px;">
+      <label>Auto-advance delay (seconds):
+        <input id="autoAdvanceDelay" type="number" min="0.5" max="10" step="0.1" value="1.0" style="width: 80px; margin-left: 10px;">
+      </label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Keyboard Controls</h3>
+    <div style="display: flex; gap: 20px;">
+      <label>Safe option key:
+        <input id="safeKey" type="text" maxlength="1" value="b" style="width: 50px; text-align: center; font-size: 16px;">
+      </label>
+      <label>Risky option key:
+        <input id="riskyKey" type="text" maxlength="1" value="n" style="width: 50px; text-align: center; font-size: 16px;">
+      </label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Trial Configuration (CSV)</h3>
+    <p>Enter trial data as CSV. Each row is one trial with three columns: <strong>Safe Value, Win Value, Loss Value</strong></p>
+    <p>Example:</p>
+    <pre style="background: #f5f5f5; padding: 10px;">10,20,0
+-5,0,-15
+0,10,-5</pre>
+    <textarea id="csvInput" placeholder="10,20,0
+-5,0,-15
+0,10,-5"></textarea>
+  </div>
+
+  <div class="section">
+    <h3>Google Sheets Web Deployment link here:</h3>
+    <input id="googleSheetsUrl" type="text" placeholder="https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec">
+  </div>
+
+  <div style="margin-top:12px;">
+    <button id="generateBtn">Generate</button>
+    <button id="downloadBtn" disabled>Download HTML</button>
+    <button id="copyBtn" disabled>Copy HTML</button>
+    <button id="copyLinkBtn" disabled>Copy Shareable Link</button>
+    <a id="openLink" href="#" target="_blank" style="display:none;">Open generated experiment</a>
+  </div>
+  <p id="linkInfo" style="display:none; margin-top:10px; color:#666; font-size:14px;">
+    To share use the shareable link above. The rest is for personal experiment building.
+  </p>
+
+  <h3>Generated HTML</h3>
+  <textarea id="output" readonly></textarea>
+
+  <script>
+    function parseCSV(csvText) {
+      const lines = csvText.trim().split('\n').filter(line => line.trim());
+      const trials = [];
+      for (let line of lines) {
+        const values = line.split(',').map(v => v.trim());
+        if (values.length >= 3) {
+          trials.push({
+            safe: parseFloat(values[0]),
+            win: parseFloat(values[1]),
+            loss: parseFloat(values[2])
+          });
+        }
+      }
+      return trials;
+    }
+
+function generateTemplate(neutralColor, greenColor, redColor, trials, instructionsText, safeKey, riskyKey, showTrialCount, randomizeTrials, autoAdvance, autoAdvanceDelay, googleSheetsUrl) {
+      const bt = '`';
+      const ds = '$';
+      const trialsJson = JSON.stringify(trials);
+
+      return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Risky Decision Task</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/jspsych@6.3.1/css/jspsych.css" />
+  <script src="https://unpkg.com/jspsych@6.3.1/jspsych.js"><` + `/script>
+  <script src="https://unpkg.com/jspsych@6.3.1/plugins/jspsych-html-keyboard-response.js"><` + `/script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Roboto, "Segoe UI", Arial;
+      padding: 0;
+      margin: 0;
+      background: #f5f5f5;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .jspsych-display-element {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .instructions {
+      max-width: 800px;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      margin: auto;
+    }
+
+    .trial-container {
+      min-height: 600px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .trial-header {
+      margin-bottom: 40px;
+      text-align: center;
+      transition: opacity 0.3s ease;
+    }
+
+    .trial-count {
+      font-size: 24px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+
+    .choice-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 120px;
+      padding: 20px;
+      height: auto;
+    }
+
+    .choice-box,
+    .risky-option {
+      width: 300px;
+      height: 240px;
+      border-radius: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: white;
+      border: 3px solid black;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      cursor: pointer;
+    }
+
+    .risky-box {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      height: auto;    
+      gap: 30px;
+      transition: opacity 0.3s ease;
+    }
+
+    .choice-value,
+    .risky-value {
+      font-size: 80px;
+      font-weight: bold;
+      text-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="jspsych-target"></div>
+
+  <script>
+  (function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const prolificId = urlParams.get("PROLIFIC_PID") || "NA";
+    const studyId = urlParams.get("STUDY_ID") || "NA";
+    const sessionId = urlParams.get("SESSION_ID") || "NA";
+    const GOOGLE_SHEETS_URL = "${googleSheetsUrl}";
+    
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function getValueColor(value, neutralColor, positiveColor, negativeColor) {
+      if (value === 0) return neutralColor;
+      return value > 0 ? positiveColor : negativeColor;
+    }
+
+    const trialConfigs = ${trialsJson};
+    ${randomizeTrials ? 'shuffleArray(trialConfigs);' : ''}
+
+    const TRIAL_COUNT = trialConfigs.length;
+    const SAFE_KEY = '${safeKey}';
+    const RISKY_KEY = '${riskyKey}';
+    const SHOW_TRIAL_COUNT = ${showTrialCount};
+    const AUTO_ADVANCE = ${autoAdvance};
+    const AUTO_ADVANCE_DELAY = ${autoAdvanceDelay * 1000};
+    const NEUTRAL_COLOR = '${neutralColor}';
+    const POSITIVE_COLOR = '${greenColor}';
+    const NEGATIVE_COLOR = '${redColor}';
+
+    let timeline = [];
+
+    const instructions = {
+      type: 'html-keyboard-response',
+      stimulus: ${bt}<div class="instructions">${instructionsText}<p style="margin-top: 30px; padding: 20px; background: #f0f0f0; border-radius: 8px; font-size: 18px;"><strong>Controls:</strong> Press <kbd>${ds}{SAFE_KEY.toUpperCase()}</kbd> for Safe, <kbd>${ds}{RISKY_KEY.toUpperCase()}</kbd> for Risky</p><p style="text-align: center; margin-top: 20px; font-size: 16px; color: #666;">Press Space to Continue</p></div>${bt},
+      choices: [' ']
+    };
+    timeline.push(instructions);
+
+    for (let t = 0; t < TRIAL_COUNT; t++) {
+      const config = trialConfigs[t];
+      
+      timeline.push({
+        type: 'html-keyboard-response',
+        stimulus: function() {
+          let trialNum = t + 1;
+          const trialCountHtml = SHOW_TRIAL_COUNT ? ${bt}<div class="trial-count">Trial ${ds}{trialNum} / ${ds}{TRIAL_COUNT}</div>${bt} : '';
+          
+          const safeColor = getValueColor(config.safe, NEUTRAL_COLOR, POSITIVE_COLOR, NEGATIVE_COLOR);
+          const winColor = getValueColor(config.win, NEUTRAL_COLOR, POSITIVE_COLOR, NEGATIVE_COLOR);
+          const lossColor = getValueColor(config.loss, NEUTRAL_COLOR, POSITIVE_COLOR, NEGATIVE_COLOR);
+          
+          return ${bt}<div class="trial-container">
+<div class="trial-header" id="trial-header">
+${ds}{trialCountHtml}
+<h2 style="font-size: 32px; margin: 0;">Choose an option:</h2>
+</div>
+<div class="choice-container">
+<div class="choice-box" id="safe-box">
+  <div class="choice-value" style="color: ${ds}{safeColor};">${ds}{config.safe}</div>
+</div>
+<div class="risky-box" id="risky-box">
+<div class="risky-option" id="win-box">
+  <div class="risky-value" style="color: ${ds}{winColor};">${ds}{config.win}</div>
+</div>
+<div class="risky-option" id="loss-box">
+  <div class="risky-value" style="color: ${ds}{lossColor};">${ds}{config.loss}</div>
+</div>
+</div>
+</div>
+</div>${bt};
+        },
+        choices: [SAFE_KEY, RISKY_KEY],
+        data: { task: 'risky_choice', trial_number: t + 1, safe_value: config.safe, win_value: config.win, loss_value: config.loss },
+        on_finish: function(data) {
+          if (jsPsych.pluginAPI.compareKeys(data.response, SAFE_KEY)) {
+            data.choice = 'safe';
+            data.outcome = config.safe;
+          } else {
+            data.choice = 'risky';
+            data.outcome = Math.random() < 0.5 ? config.loss : config.win;
+          }
+          data.rt_seconds = (data.rt / 1000).toFixed(3);
+        }
+      });
+
+      timeline.push({
+        type: 'html-keyboard-response',
+        stimulus: function() {
+          const lastData = jsPsych.data.get().last(1).values()[0];
+          const safeSelected = lastData.choice === 'safe';
+          const riskySelected = lastData.choice === 'risky';
+          const outcome = lastData.outcome;
+          
+          const safeColor = getValueColor(lastData.safe_value, NEUTRAL_COLOR, POSITIVE_COLOR, NEGATIVE_COLOR);
+          const winColor = getValueColor(lastData.win_value, NEUTRAL_COLOR, POSITIVE_COLOR, NEGATIVE_COLOR);
+          const lossColor = getValueColor(lastData.loss_value, NEUTRAL_COLOR, POSITIVE_COLOR, NEGATIVE_COLOR);
+
+          const isWin = riskySelected && outcome === lastData.win_value;
+          const isLoss = riskySelected && outcome === lastData.loss_value;
+
+          let trialNum = t + 1;
+          const trialCountHtml = SHOW_TRIAL_COUNT ? ${bt}<div class="trial-count">Trial ${ds}{trialNum} / ${ds}{TRIAL_COUNT}</div>${bt} : '';
+
+          return ${bt}
+      <div class="trial-container">
+        <div class="trial-header" style="opacity: 0;">
+          ${ds}{trialCountHtml}
+          <h2 style="font-size: 32px; margin: 0;">Choose an option:</h2>
+        </div>
+        <div class="choice-container">
+          <div class="choice-box" id="safe-box" style="opacity:${ds}{safeSelected ? 1 : 0.0}">
+            <div class="choice-value" style="color: ${ds}{safeColor};">${ds}{lastData.safe_value}</div>
+          </div>
+          <div class="risky-box" id="risky-box" style="opacity:${ds}{riskySelected ? 1 : 0.0}">
+            <div class="risky-option" style="opacity:${ds}{isWin ? 1 : 0}">
+              <div class="risky-value" style="color: ${ds}{winColor};">
+                ${ds}{lastData.win_value}
+              </div>
+            </div>
+            <div class="risky-option" style="opacity:${ds}{isLoss ? 1 : 0}">
+              <div class="risky-value" style="color: ${ds}{lossColor};">
+                ${ds}{lastData.loss_value}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    ${bt};
+        },
+        trial_duration: AUTO_ADVANCE ? AUTO_ADVANCE_DELAY : null,
+        choices: AUTO_ADVANCE ? jsPsych.NO_KEYS : jsPsych.ALL_KEYS,
+        data: { task: 'feedback' }
+      });
+    }
+
+    timeline.push({
+      type: 'html-keyboard-response',
+      stimulus: function() {
+        const total = jsPsych.data.get().filter(d => typeof d.outcome !== 'undefined').select('outcome').sum();
+        return ${bt}<div style="text-align: center; padding: 40px; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;"><h2 style="font-size: 48px;">All done!</h2><p style="font-size: 32px;">Your total score: <strong>${ds}{total}</strong> points.</p><p style="font-size: 24px;">Thank you for participating.</p><p style="font-size: 18px; color: #666; margin-top: 40px;">Press any key to finish</p></div>${bt};
+      },
+      choices: jsPsych.ALL_KEYS,
+      on_finish: function() {
+        const trialData = jsPsych.data.get().filter(d => d.task === 'risky_choice').values();
+
+        const payload = {
+          prolificId: prolificId,
+          studyId: studyId,
+          sessionId: sessionId,
+          trials: trialData
+        };
+
+        if (GOOGLE_SHEETS_URL && GOOGLE_SHEETS_URL.trim() !== "") {
+          fetch(GOOGLE_SHEETS_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          })
+          .then(() => {
+            console.log("Data sent to Google Sheets");
+            alert("Thank you! Your responses have been recorded.\\n\\nParticipant ID: " + prolificId);
+          })
+          .catch(err => {
+            console.error("Error sending data:", err);
+            alert("Data collection complete. Note: Connection to server could not be verified.\\n\\nParticipant ID: " + prolificId);
+          });
+        } else {
+          console.log("No Google Sheets URL configured - data saved locally only");
+          alert("Thank you! Data saved locally.\\n\\nParticipant ID: " + prolificId);
+        }
+      }
+    });
+
+    jsPsych.init({
+      timeline,
+      display_element: 'jspsych-target'
+    });
+  })();
+  <` + `/script>
+</body>
+</html>`;
+    }
+
+    const neutralInput = document.getElementById('neutralColor');
+    const greenInput = document.getElementById('greenColor');
+    const redInput = document.getElementById('redColor');
+    const nhex = document.getElementById('nhex');
+    const ghex = document.getElementById('ghex');
+    const rhex = document.getElementById('rhex');
+    const csvInput = document.getElementById('csvInput');
+    const instructionsInput = document.getElementById('instructionsInput');
+    const safeKeyInput = document.getElementById('safeKey');
+    const riskyKeyInput = document.getElementById('riskyKey');
+    const showTrialCountCheckbox = document.getElementById('showTrialCount');
+    const randomizeTrialsCheckbox = document.getElementById('randomizeTrials');
+    const autoAdvanceCheckbox = document.getElementById('autoAdvance');
+    const autoAdvanceDelayInput = document.getElementById('autoAdvanceDelay');
+    const googleSheetsUrlInput = document.getElementById('googleSheetsUrl');
+    const generateBtn = document.getElementById('generateBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    const output = document.getElementById('output');
+    const openLink = document.getElementById('openLink');
+
+    function updateHexDisplays() {
+      nhex.textContent = ' ' + neutralInput.value;
+      ghex.textContent = ' ' + greenInput.value;
+      rhex.textContent = ' ' + redInput.value;
+    }
+    updateHexDisplays();
+    neutralInput.addEventListener('input', updateHexDisplays);
+    greenInput.addEventListener('input', updateHexDisplays);
+    redInput.addEventListener('input', updateHexDisplays);
+
+    let generatedBlobUrl = null;
+
+    function revokePrevious() {
+      if (generatedBlobUrl) {
+        try { URL.revokeObjectURL(generatedBlobUrl); } catch(e){/*ignore*/ }
+        generatedBlobUrl = null;
+      }
+    }
+
+    generateBtn.addEventListener('click', () => {
+      revokePrevious();
+      const neutralColor = neutralInput.value;
+      const greenColor = greenInput.value;
+      const redColor = redInput.value;
+      const instructionsText = instructionsInput.value;
+      const safeKey = safeKeyInput.value.trim() || 'b';
+      const riskyKey = riskyKeyInput.value.trim() || 'n';
+      const showTrialCount = showTrialCountCheckbox.checked;
+      const randomizeTrials = randomizeTrialsCheckbox.checked;
+      const autoAdvance = autoAdvanceCheckbox.checked;
+      const autoAdvanceDelay = parseFloat(autoAdvanceDelayInput.value) || 1.0;
+      const googleSheetsUrl = googleSheetsUrlInput.value.trim();
+      const trials = parseCSV(csvInput.value);
+      
+      if (trials.length === 0) {
+        alert('Please enter trial configuration data in the CSV field.');
+        return;
+      }
+      
+      const html = generateTemplate(neutralColor, greenColor, redColor, trials, instructionsText, safeKey, riskyKey, showTrialCount, randomizeTrials, autoAdvance, autoAdvanceDelay, googleSheetsUrl);
+      output.value = html;
+      downloadBtn.disabled = false;
+      copyBtn.disabled = false;
+      copyLinkBtn.disabled = false;
+      const blob = new Blob([html], {type:'text/html'});
+      generatedBlobUrl = URL.createObjectURL(blob);
+      openLink.href = generatedBlobUrl;
+      openLink.style.display = 'inline';
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const blob = new Blob([output.value], {type:'text/html'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'risky_task.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    copyBtn.addEventListener('click', () => {
+      output.select();
+      document.execCommand('copy');
+      alert('HTML copied to clipboard!');
+    });
+
+    copyLinkBtn.addEventListener('click', () => {
+      if (output.value) {
+        const base64 = btoa(unescape(encodeURIComponent(output.value)));
+        const dataUrl = 'data:text/html;base64,' + base64;
+        
+        navigator.clipboard.writeText(dataUrl).then(() => {
+          alert('Data URL copied! You can paste it into any browser to open the experiment.');
+        });
+      }
+    });
+  </script>
+</body>
+</html>
