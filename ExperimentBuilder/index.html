@@ -9,7 +9,9 @@
 <body>
   <h1>Risky Task Generator</h1>
   <p>Adjust everything that you need, then click <b>Generate</b> to create your experiment.</p>
-  <p>Made by <a href="https://stwangchuk.github.io/" class="blue-name" target="_blank" rel="noopener noreferrer">Sonam Tenzin Wangchuk.</a></li></p>
+  <p>Made by <a href="https://stwangchuk.github.io/" class="blue-name" target="_blank" rel="noopener noreferrer">Sonam Tenzin Wangchuk.</a></p>
+  <p>User guide is <a href="https://juvenile-plant-e5c.notion.site/Rutledge-Lab-Experiment-Builder-2a3e22c2828f80f7a72aebf9a0580637" class="blue-name" target="_blank" rel="noopener noreferrer">here.</a></p>
+
 
   <div class="section">
     <h3>Colors</h3>
@@ -77,6 +79,11 @@
         <input id="autoAdvanceDelay" type="number" min="0.5" max="10" step="0.1" value="1.0" style="width: 80px; margin-left: 10px;">
       </label>
     </div>
+    <div style="margin-top: 15px; margin-left: 60px;">
+      <label>Risky outcome reveal delay (seconds):
+        <input id="riskyRevealDelay" type="number" min="0" max="5" step="0.1" value="0.7" style="width: 80px; margin-left: 10px;">
+      </label>
+    </div>
   </div>
 
   <div class="section">
@@ -119,6 +126,12 @@
     To share use the shareable link above. The rest is for personal experiment building.
   </p>
 
+  <h3>CSV Column Headers</h3>
+  <textarea id="csvHeaders" readonly style="height: 80px; background: #f9f9f9;"></textarea>
+
+  <h3>Google Sheets Script</h3>
+  <textarea id="googleScript" readonly style="height: 300px; background: #f9f9f9;"></textarea>
+
   <h3>Generated HTML</h3>
   <textarea id="output" readonly></textarea>
 
@@ -139,7 +152,7 @@
       return trials;
     }
 
-function generateTemplate(neutralColor, greenColor, redColor, trials, instructionsText, safeKey, riskyKey, showTrialCount, randomizeTrials, autoAdvance, autoAdvanceDelay, googleSheetsUrl) {
+function generateTemplate(neutralColor, greenColor, redColor, trials, instructionsText, safeKey, riskyKey, showTrialCount, randomizeTrials, autoAdvance, autoAdvanceDelay, riskyRevealDelay, googleSheetsUrl) {
       const bt = '`';
       const ds = '$';
       const trialsJson = JSON.stringify(trials);
@@ -273,9 +286,11 @@ function generateTemplate(neutralColor, greenColor, redColor, trials, instructio
     const SHOW_TRIAL_COUNT = ${showTrialCount};
     const AUTO_ADVANCE = ${autoAdvance};
     const AUTO_ADVANCE_DELAY = ${autoAdvanceDelay * 1000};
+    const RISKY_REVEAL_DELAY = ${riskyRevealDelay * 1000};
     const NEUTRAL_COLOR = '${neutralColor}';
     const POSITIVE_COLOR = '${greenColor}';
     const NEGATIVE_COLOR = '${redColor}';
+    const RANDOMIZE_TRIALS = ${randomizeTrials};
 
     let timeline = [];
 
@@ -320,7 +335,17 @@ ${ds}{trialCountHtml}
 </div>${bt};
         },
         choices: [SAFE_KEY, RISKY_KEY],
-        data: { task: 'risky_choice', trial_number: t + 1, safe_value: config.safe, win_value: config.win, loss_value: config.loss },
+        data: { 
+          task: 'risky_choice', 
+          trial_number: t + 1, 
+          safe_value: config.safe, 
+          win_value: config.win, 
+          loss_value: config.loss,
+          show_trial_count: SHOW_TRIAL_COUNT,
+          randomize_trials: RANDOMIZE_TRIALS,
+          auto_advance: AUTO_ADVANCE,
+          risky_reveal_delay: RISKY_REVEAL_DELAY
+        },
         on_finish: function(data) {
           if (jsPsych.pluginAPI.compareKeys(data.response, SAFE_KEY)) {
             data.choice = 'safe';
@@ -333,10 +358,61 @@ ${ds}{trialCountHtml}
         }
       });
 
+      // Delay screen for risky choice only
       timeline.push({
         type: 'html-keyboard-response',
         stimulus: function() {
           const lastData = jsPsych.data.get().last(1).values()[0];
+          const riskySelected = lastData.choice === 'risky';
+          
+          if (!riskySelected) return '';
+          
+          const safeColor = getValueColor(lastData.safe_value, NEUTRAL_COLOR, POSITIVE_COLOR, NEGATIVE_COLOR);
+          const winColor = getValueColor(lastData.win_value, NEUTRAL_COLOR, POSITIVE_COLOR, NEGATIVE_COLOR);
+          const lossColor = getValueColor(lastData.loss_value, NEUTRAL_COLOR, POSITIVE_COLOR, NEGATIVE_COLOR);
+
+          let trialNum = t + 1;
+          const trialCountHtml = SHOW_TRIAL_COUNT ? ${bt}<div class="trial-count">Trial ${ds}{trialNum} / ${ds}{TRIAL_COUNT}</div>${bt} : '';
+
+          return ${bt}
+        <div class="trial-container">
+          <div class="trial-header" style="opacity: 0;">
+            ${ds}{trialCountHtml}
+            <h2 style="font-size: 32px; margin: 0;">Choose an option:</h2>
+          </div>
+          <div class="choice-container">
+            <div class="choice-box" id="safe-box" style="opacity: 0">
+              <div class="choice-value" style="color: ${ds}{safeColor};">${ds}{lastData.safe_value}</div>
+            </div>
+            <div class="risky-box" id="risky-box" style="opacity: 1">
+              <div class="risky-option">
+                <div class="risky-value" style="color: ${ds}{winColor};">
+                  ${ds}{lastData.win_value}
+                </div>
+              </div>
+              <div class="risky-option">
+                <div class="risky-value" style="color: ${ds}{lossColor};">
+                  ${ds}{lastData.loss_value}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ${bt};
+        },
+        trial_duration: function() {
+          const lastData = jsPsych.data.get().last(1).values()[0];
+          return lastData.choice === 'risky' ? RISKY_REVEAL_DELAY : 1;
+        },
+        choices: jsPsych.NO_KEYS,
+        data: { task: 'risky_delay' }
+      });
+
+      // Feedback screen
+      timeline.push({
+        type: 'html-keyboard-response',
+        stimulus: function() {
+          const lastData = jsPsych.data.get().filter({task: 'risky_choice'}).last(1).values()[0];
           const safeSelected = lastData.choice === 'safe';
           const riskySelected = lastData.choice === 'risky';
           const outcome = lastData.outcome;
@@ -393,11 +469,16 @@ ${ds}{trialCountHtml}
       on_finish: function() {
         const trialData = jsPsych.data.get().filter(d => d.task === 'risky_choice').values();
 
+        const validTrials = trialData.filter(row => 
+          row.trial_number !== undefined && 
+          row.choice !== undefined
+        );
+
         const payload = {
           prolificId: prolificId,
           studyId: studyId,
           sessionId: sessionId,
-          trials: trialData
+          trials: validTrials 
         };
 
         if (GOOGLE_SHEETS_URL && GOOGLE_SHEETS_URL.trim() !== "") {
@@ -416,8 +497,63 @@ ${ds}{trialCountHtml}
             alert("Data collection complete. Note: Connection to server could not be verified.\\n\\nParticipant ID: " + prolificId);
           });
         } else {
-          console.log("No Google Sheets URL configured - data saved locally only");
-          alert("Thank you! Data saved locally.\\n\\nParticipant ID: " + prolificId);
+          console.log("No Google Sheets URL configured - downloading CSV locally");
+          
+          // Generate CSV content - only include actual trial choice data
+          const headers = [
+            'timestamp',
+            'prolificId',
+            'studyId',
+            'sessionId',
+            'trial_number',
+            'safe_value',
+            'win_value',
+            'loss_value',
+            'choice',
+            'outcome',
+            'rt_seconds',
+            'show_trial_count',
+            'randomize_trials',
+            'auto_advance',
+            'risky_reveal_delay'
+          ];
+          
+          let csvContent = headers.join(',') + '\\n';
+          
+          // **The filter is already applied above, so we just use validTrials**
+          validTrials.forEach(row => {
+            const rowData = [
+              '"' + new Date().toISOString() + '"',
+              '"' + prolificId + '"',
+              '"' + studyId + '"',
+              '"' + sessionId + '"',
+              row.trial_number,
+              row.safe_value,
+              row.win_value,
+              row.loss_value,
+              '"' + row.choice + '"',
+              row.outcome,
+              row.rt_seconds,
+              row.show_trial_count,
+              row.randomize_trials,
+              row.auto_advance,
+              row.risky_reveal_delay
+            ];
+            csvContent += rowData.join(',') + '\\n';
+          });
+          
+          // Download CSV
+          const blob = new Blob([csvContent], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'risky_task_data_' + prolificId + '_' + new Date().getTime() + '.csv';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          alert("Thank you! Your data has been downloaded as a CSV file.\\n\\nParticipant ID: " + prolificId);
         }
       }
     });
@@ -446,12 +582,15 @@ ${ds}{trialCountHtml}
     const randomizeTrialsCheckbox = document.getElementById('randomizeTrials');
     const autoAdvanceCheckbox = document.getElementById('autoAdvance');
     const autoAdvanceDelayInput = document.getElementById('autoAdvanceDelay');
+    const riskyRevealDelayInput = document.getElementById('riskyRevealDelay');
     const googleSheetsUrlInput = document.getElementById('googleSheetsUrl');
     const generateBtn = document.getElementById('generateBtn');
     const downloadBtn = document.getElementById('downloadBtn');
     const copyBtn = document.getElementById('copyBtn');
     const copyLinkBtn = document.getElementById('copyLinkBtn');
     const output = document.getElementById('output');
+    const csvHeaders = document.getElementById('csvHeaders');
+    const googleScript = document.getElementById('googleScript');
     const openLink = document.getElementById('openLink');
 
     function updateHexDisplays() {
@@ -485,6 +624,7 @@ ${ds}{trialCountHtml}
       const randomizeTrials = randomizeTrialsCheckbox.checked;
       const autoAdvance = autoAdvanceCheckbox.checked;
       const autoAdvanceDelay = parseFloat(autoAdvanceDelayInput.value) || 1.0;
+      const riskyRevealDelay = parseFloat(riskyRevealDelayInput.value) || 0.2;
       const googleSheetsUrl = googleSheetsUrlInput.value.trim();
       const trials = parseCSV(csvInput.value);
       
@@ -493,8 +633,89 @@ ${ds}{trialCountHtml}
         return;
       }
       
-      const html = generateTemplate(neutralColor, greenColor, redColor, trials, instructionsText, safeKey, riskyKey, showTrialCount, randomizeTrials, autoAdvance, autoAdvanceDelay, googleSheetsUrl);
+      const html = generateTemplate(neutralColor, greenColor, redColor, trials, instructionsText, safeKey, riskyKey, showTrialCount, randomizeTrials, autoAdvance, autoAdvanceDelay, riskyRevealDelay, googleSheetsUrl);
       output.value = html;
+
+      // Generate CSV headers
+      const headers = [
+        'timestamp',
+        'prolificId',
+        'studyId',
+        'sessionId',
+        'trial_number',
+        'safe_value',
+        'win_value',
+        'loss_value',
+        'choice',
+        'outcome',
+        'rt_seconds',
+        'show_trial_count',
+        'randomize_trials',
+        'auto_advance',
+        'risky_reveal_delay'
+      ];
+      csvHeaders.value = headers.join(',');
+
+      // Generate Google Sheets script
+      const scriptTemplate = `function doPost(e) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Sheet1');
+    
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: "Sheet1 not found"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    const data = JSON.parse(e.postData.contents);
+    
+    const prolificId = data.prolificId || "NA";
+    const studyId = data.studyId || "NA";
+    const sessionId = data.sessionId || "NA";
+    const rows = data.trials;
+    
+    if (!rows || rows.length === 0) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: "No trial data received"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    rows.forEach(row => {
+      sheet.appendRow([
+        new Date(),
+        prolificId,
+        studyId,
+        sessionId,
+        row.trial_number,
+        row.safe_value,
+        row.win_value,
+        row.loss_value,
+        row.choice,
+        row.outcome,
+        row.rt_seconds,
+        row.show_trial_count,
+        row.randomize_trials,
+        row.auto_advance,
+        row.risky_reveal_delay
+      ]);
+    });
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      rowsAdded: rows.length
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+      googleScript.value = scriptTemplate;
+
       downloadBtn.disabled = false;
       copyBtn.disabled = false;
       copyLinkBtn.disabled = false;
