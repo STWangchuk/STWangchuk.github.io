@@ -8,7 +8,6 @@
 </head>
 <body>
   <h1>Risky Task Generator</h1>
-  <p>Adjust everything that you need, then click <b>Generate</b> to create your experiment.</p>
   <p>Made by <a href="https://stwangchuk.github.io/" class="blue-name" target="_blank" rel="noopener noreferrer">Sonam Tenzin Wangchuk.</a></p>
   <p>User guide is <a href="https://juvenile-plant-e5c.notion.site/Rutledge-Lab-Experiment-Builder-2a3e22c2828f80f7a72aebf9a0580637" class="blue-name" target="_blank" rel="noopener noreferrer">here.</a></p>
 
@@ -17,19 +16,19 @@
     <h3>Colors</h3>
     <div class="color-inputs">
       <div class="color-group">
-        <label>Color for 0:
+        <label>Zero
           <input id="neutralColor" type="color" value="#347edf">
           <span id="nhex"></span>
         </label>
       </div>
       <div class="color-group">
-        <label>Positive Numbers:
+        <label>+
           <input id="greenColor" type="color" value="#3bc43b">
           <span id="ghex"></span>
         </label>
       </div>
       <div class="color-group">
-        <label>Negative Numbers:
+        <label>-
           <input id="redColor" type="color" value="#f83f3f">
           <span id="rhex"></span>
         </label>
@@ -39,7 +38,7 @@
 
   <div class="section">
     <h3>Instructions Text</h3>
-    <p>Customize the opening instructions (HTML allowed):</p>
+    <p>Customize the opening instructions:</p>
     <textarea id="instructionsInput" style="height: 100px;"><h1>Risky Decision-Making Task</h1>
 <p>On each trial you will choose between a <strong>Safe</strong> option and a <strong>Risky</strong> option.</p>
 <p>The Safe option gives a guaranteed number of points.</p>
@@ -122,9 +121,6 @@
     <button id="copyLinkBtn" disabled>Copy Shareable Link</button>
     <a id="openLink" href="#" target="_blank" style="display:none;">Open generated experiment</a>
   </div>
-  <p id="linkInfo" style="display:none; margin-top:10px; color:#666; font-size:14px;">
-    To share use the shareable link above. The rest is for personal experiment building.
-  </p>
 
   <h3>CSV Column Headers</h3>
   <textarea id="csvHeaders" readonly style="height: 80px; background: #f9f9f9;"></textarea>
@@ -722,7 +718,7 @@ ${ds}{trialCountHtml}
       const blob = new Blob([html], {type:'text/html'});
       generatedBlobUrl = URL.createObjectURL(blob);
       openLink.href = generatedBlobUrl;
-      openLink.style.display = 'inline';
+      openLink.classList.add('open-link-visible');
     });
 
     downloadBtn.addEventListener('click', () => {
