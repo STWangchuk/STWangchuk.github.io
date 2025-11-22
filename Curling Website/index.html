@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Curling Win Prob - With Rotation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        
+        /* --- 1. CURING SHEET ASSET --- */
+        #curling-field {
+            aspect-ratio: 2 / 1;
+            position: relative;
+            background-color: #fff; 
+            border: 4px solid #cbd5e1;
+            overflow: hidden;
+            /* BACKGROUND IMAGE CONFIG */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* --- 2. STONE ASSETS --- */
+        .stone {
+            position: absolute;
+            width: 30px; height: 30px; 
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            z-index: 20;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            /* Smooth shadow only, transform handled by JS */
+            transition: box-shadow 0.1s;
+        }
+        .stone:active { 
+            cursor: grabbing; 
+            z-index: 30;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.4);
+        }
+    </style>
+</head>
+<body class="p-4 flex flex-col items-center">
+
+    <div class="w-full max-w-5xl mb-6">
+        <div class="flex justify-between items-end mb-2">
+            <h1 class="text-2xl font-bold text-gray-800">Win Probability <span class="text-sm font-normal text-gray-500">(Asset Version)</span></h1>
+            <div class="text-right">
+                <div class="text-xs font-mono text-gray-500">Hammer: <span id="val-hammer" class="font-bold text-black">RED</span></div>
+                <div class="text-xs font-mono text-gray-500">Shot ID: <span id="val-shot" class="font-bold text-black">1</span></div>
+            </div>
+        </div>
+
+        <div class="h-8 w-full bg-gray-300 rounded-full flex overflow-hidden shadow-inner relative">
+            <div id="bar-red" class="bg-red-600 h-full flex items-center justify-start pl-4 text-white font-bold transition-all duration-500" style="width: 50%">50%</div>
+            <div id="bar-yellow" class="bg-yellow-400 h-full flex items-center justify-end pr-4 text-gray-900 font-bold transition-all duration-500 ml-auto" style="width: 50%">50%</div>
+            <div class="absolute top-0 bottom-0 left-1/2 w-0.5 bg-black opacity-20 transform -translate-x-1/2"></div>
+        </div>
+    </div>
+
+    <div class="w-full max-w-5xl">
+        
+        <div class="bg-white p-4 rounded-xl shadow-lg mb-6">
+            <div class="flex justify-between mb-2">
+                <h2 class="font-bold text-gray-700">Placement Area</h2>
+            </div>
+            
+            <div id="curling-field">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div class="flex gap-2">
+                    <button onclick="addStone('red')" class="flex-1 py-3 bg-red-600 text-white font-bold rounded shadow hover:bg-red-700 transition">Add Red</button>
+                    <button onclick="addStone('yellow')" class="flex-1 py-3 bg-yellow-500 text-gray-900 font-bold rounded shadow hover:bg-yellow-600 transition">Add Yellow</button>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="toggleHammer()" id="btn-hammer" class="flex-1 py-3 bg-gray-800 text-white font-bold rounded shadow hover:bg-gray-900 transition">
+                        Hammer: RED
+                    </button>
+                    <button onclick="clearBoard()" class="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded shadow hover:bg-gray-300 transition">
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+            <div class="flex justify-between mb-1">
+                <label class="text-sm font-bold text-gray-700">Shot Number (1-10)</label>
+                <span id="shot-display" class="text-sm font-bold text-blue-600">1</span>
+            </div>
+            <input type="range" id="shot-slider" min="1" max="10" value="1" 
+                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                   oninput="updateContext(this.value)">
+        </div>
+
+    </div>
+
+    <script>
+        // ============================================
+        // 1. ASSET CONFIGURATION
+        // ============================================
+        const ASSETS = {
+            sheet: './assets/Sheet.png',          
+            redStone: './assets/RedStone.png',
+            yellowStone: './assets/YellowStone.png'
+        };
+
+        const sheetEl = document.getElementById('curling-field');
+        if(ASSETS.sheet) sheetEl.style.backgroundImage = `url('${ASSETS.sheet}')`;
+
+        // ============================================
+        // 2. CONFIG & CONSTANTS
+        // ============================================
+        const CONFIG = {
+            STONE_SIZE: 30,
+            HOUSE_X_RATIO: 0.73, // Center is ~73% to the right
+            HOUSE_Y_RATIO: 0.50  // Center is Middle vertically
+        };
+
+        const state = {
+            hammer: 1, 
+            shotId: 1,
+            stones: [] 
+        };
+        let stoneIdCounter = 0;
+
+        // ============================================
+        // 3. LOGIC
+        // ============================================
+
+        function updateWinProb() {
+            const stones = state.stones.map(s => ({
+                ...s,
+                dist: Math.hypot(s.x, s.y)
+            })).sort((a,b) => a.dist - b.dist);
+
+            let redSitting = 0, yellowSitting = 0;
+            if (stones.length > 0) {
+                const bestColor = stones[0].color;
+                for (let s of stones) {
+                    if (s.color === bestColor) {
+                        bestColor === 'red' ? redSitting++ : yellowSitting++;
+                    } else break;
+                }
+            }
+
+            let logOdds = 0;
+            const shotProgress = state.shotId / 10;
+            const pointWeight = 0.8 + (shotProgress * 1.5);
+            
+            logOdds += (redSitting * pointWeight);
+            logOdds -= (yellowSitting * pointWeight);
+
+            let hammerVal = (state.hammer === 1) ? 1 : -1;
+            if (state.hammer === 1 && yellowSitting > 0) hammerVal *= 0.5;
+            if (state.hammer === 0 && redSitting > 0) hammerVal *= 0.5;
+            logOdds += hammerVal * 1.1;
+
+            const redGuards = state.stones.filter(s => s.color === 'red' && s.x < -0.2).length;
+            const yelGuards = state.stones.filter(s => s.color === 'yellow' && s.x < -0.2).length;
+            logOdds += (redGuards - yelGuards) * 0.2 * (1 - shotProgress);
+
+            const prob = 1 / (1 + Math.exp(-logOdds));
+            updateUI(prob);
+        }
+
+        function updateUI(prob) {
+            const pctRed = Math.round(prob * 100);
+            const pctYel = 100 - pctRed;
+            document.getElementById('bar-red').style.width = `${pctRed}%`;
+            document.getElementById('bar-red').innerText = pctRed > 10 ? `${pctRed}%` : '';
+            document.getElementById('bar-yellow').style.width = `${pctYel}%`;
+            document.getElementById('bar-yellow').innerText = pctYel > 10 ? `${pctYel}%` : '';
+        }
+
+        // ============================================
+        // 4. INTERACTION (WITH ROTATION)
+        // ============================================
+        function addStone(color) {
+            const count = state.stones.filter(s => s.color === color).length;
+            if (count >= 6) {
+                alert(`You can only add up to 6 ${color} stones!`);
+                return;
+            }
+
+            stoneIdCounter++;
+            const id = stoneIdCounter;
+            const el = document.createElement('div');
+            el.className = `stone stone-${color}`;
+            
+            const imgUrl = color === 'red' ? ASSETS.redStone : ASSETS.yellowStone;
+            el.style.backgroundImage = `url('${imgUrl}')`;
+
+            // START POSITION
+            const rect = sheetEl.getBoundingClientRect();
+            const startX = (rect.width * CONFIG.HOUSE_X_RATIO) - (CONFIG.STONE_SIZE / 2) + (Math.random()*20 - 10);
+            const startY = (rect.height * CONFIG.HOUSE_Y_RATIO) - (CONFIG.STONE_SIZE / 2) + (Math.random()*20 - 10);
+
+            el.style.transform = `translate3d(${startX}px, ${startY}px, 0) rotate(0deg)`;
+            sheetEl.appendChild(el);
+
+            const norm = normalize(startX, startY);
+            state.stones.push({ id, color, x: norm.x, y: norm.y, rotation: 0 });
+
+            makeDraggable(el, id);
+            updateWinProb();
+        }
+
+
+        function makeDraggable(el, id) {
+            let isDragging = false;
+            let initialX, initialY, currentX, currentY, xOffset = 0, yOffset = 0;
+            let currentRotation = 0;
+            let lastMouseX = 0;
+
+            // Get initial translate values from CSS
+            const style = window.getComputedStyle(el);
+            const matrix = new WebKitCSSMatrix(style.webkitTransform);
+            xOffset = matrix.m41;
+            yOffset = matrix.m42;
+            
+            // Get stored rotation from state to prevent snapping back to 0
+            const stoneState = state.stones.find(s => s.id === id);
+            if (stoneState) currentRotation = stoneState.rotation;
+
+            const dragStart = (e) => {
+                if (e.target === el) {
+                    initialX = e.touches ? e.touches[0].clientX : e.clientX;
+                    initialY = e.touches ? e.touches[0].clientY : e.clientY;
+                    lastMouseX = initialX; // Track for rotation delta
+                    isDragging = true;
+                    el.classList.add('active');
+                }
+            };
+
+            const drag = (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                const dX = clientX - initialX;
+                const dY = clientY - initialY;
+
+                currentX = xOffset + dX;
+                currentY = yOffset + dY;
+
+                // ROTATION LOGIC:
+                // Calculate how much X moved since last frame
+                const diffX = clientX - lastMouseX;
+                lastMouseX = clientX;
+                
+                // Apply rotation based on horizontal movement speed
+                // Multiply by 1.5 to make it spin a bit faster
+                currentRotation += diffX * 1.5;
+
+                const rect = sheetEl.getBoundingClientRect();
+                currentX = Math.max(0, Math.min(currentX, rect.width - CONFIG.STONE_SIZE));
+                currentY = Math.max(0, Math.min(currentY, rect.height - CONFIG.STONE_SIZE));
+
+                // Apply both Translate and Rotate
+                el.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) rotate(${currentRotation}deg)`;
+
+                const norm = normalize(currentX, currentY);
+                const s = state.stones.find(st => st.id === id);
+                if (s) { 
+                    s.x = norm.x; 
+                    s.y = norm.y; 
+                    s.rotation = currentRotation; // Save rotation
+                }
+                updateWinProb();
+            };
+
+            const dragEnd = () => {
+                if(!isDragging) return;
+                initialX = currentX;
+                initialY = currentY;
+                xOffset = currentX;
+                yOffset = currentY;
+                isDragging = false;
+                el.classList.remove('active');
+            };
+
+            el.addEventListener("mousedown", dragStart);
+            el.addEventListener("touchstart", dragStart);
+            window.addEventListener("mousemove", drag);
+            window.addEventListener("touchmove", drag);
+            window.addEventListener("mouseup", dragEnd);
+            window.addEventListener("touchend", dragEnd);
+        }
+
+        // NORMALIZE relative to the 75% Mark
+        function normalize(x, y) {
+            const rect = sheetEl.getBoundingClientRect();
+            const buttonPixelX = rect.width * CONFIG.HOUSE_X_RATIO;
+            const buttonPixelY = rect.height * CONFIG.HOUSE_Y_RATIO;
+            
+            const stoneCenterX = x + (CONFIG.STONE_SIZE / 2);
+            const stoneCenterY = y + (CONFIG.STONE_SIZE / 2);
+
+            const unitScale = rect.height / 2; 
+
+            const nX = (stoneCenterX - buttonPixelX) / unitScale;
+            const nY = (stoneCenterY - buttonPixelY) / unitScale;
+            
+            return { x: nX, y: nY };
+        }
+
+        function toggleHammer() {
+            state.hammer = state.hammer === 1 ? 0 : 1;
+            const btn = document.getElementById('btn-hammer');
+            document.getElementById('val-hammer').innerText = state.hammer === 1 ? "RED" : "YELLOW";
+            document.getElementById('val-hammer').className = state.hammer === 1 ? "font-bold text-red-600" : "font-bold text-yellow-600";
+            
+            if (state.hammer === 1) {
+                btn.innerText = "Hammer: RED";
+                btn.className = "flex-1 py-3 bg-gray-800 text-white font-bold rounded shadow hover:bg-gray-900 transition";
+            } else {
+                btn.innerText = "Hammer: YELLOW";
+                btn.className = "flex-1 py-3 bg-yellow-500 text-gray-900 font-bold rounded shadow hover:bg-yellow-600 transition";
+            }
+            updateWinProb();
+        }
+
+        function updateContext(val) {
+            state.shotId = parseInt(val);
+            document.getElementById('shot-display').innerText = val;
+            document.getElementById('val-shot').innerText = val;
+            updateWinProb();
+        }
+
+        function clearBoard() {
+            state.stones = [];
+            document.querySelectorAll('.stone').forEach(e => e.remove());
+            updateWinProb();
+        }
+
+        updateWinProb();
+
+    </script>
+</body>
+</html>
